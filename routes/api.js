@@ -9,37 +9,48 @@
 "use strict"
 
 var expect = require("chai").expect
-var MongoClient = require("mongodb")
-const axios = require("axios")
+const Currency = require("./../models/currency")
+const StockHandler = require("./../controllers/stockHandler")
 
 const CONNECTION_STRING = process.env.DB //MongoClient.connect(CONNECTION_STRING, function(err, db) {});
 
-const getPrice = async stock => {
-  const {
-    data: { latestPrice: price }
-  } = await axios
-    .get(`https://repeated-alpaca.glitch.me/v1/stock/${stock}/quote`)
-    .catch(err => err)
-  return price
-}
-
 module.exports = function(app) {
   app.route("/api/stock-prices").get(async (req, res) => {
+    const stockHandler = new StockHandler()
     const { stock, like } = req.query
     if (stock instanceof Array) {
-      const stockData = []
-      for await (const cur of stock) {
-        stockData.push({stoc: cur, price: await getPrice(cur)})
-      }
-      // const stockData = await stock.map(async stock => {
-      //   const price = await getPrice(stock)
-      //   return {stock, price}
-      // })
-      res.json({ stockData })
+      const stockData = await stockHandler.getStockData({ stock, like })
+      console.log(stockData)
+      return res.json({
+        stockData: stockData.map(({ stock, price, rel_likes }) => ({
+          stock,
+          price,
+          rel_likes
+        }))
+      })
     } else {
-      const price = await getPrice(stock)
-      console.log(price)
-      res.json({ stockData: { stock, price } })
+      const ip = req.headers["x-real-ip"] || req.connection.remoteAddress
+      const price = await stockHandler.getPrice(stock)
+      const dbStock = await Currency.findOne({ name: stock })
+      if (!dbStock) {
+        const dbLike = like ? [{ ip }] : []
+        await new Currency({
+          name: stock,
+          like: dbLike
+        }).save()
+        const likes = dbLike.length
+        return res.json({ stockData: { stock, price, likes } })
+      } else {
+        if (
+          like &&
+          dbStock.like.every(({ ip: previousIp }) => previousIp !== ip)
+        ) {
+          dbStock.like.push({ ip })
+          await dbStock.save()
+        }
+        const likes = dbStock.like.length
+        return res.json({ stockData: { stock, price, likes } })
+      }
     }
   })
 }

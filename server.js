@@ -4,13 +4,15 @@ var express = require("express")
 var bodyParser = require("body-parser")
 var expect = require("chai").expect
 var cors = require("cors")
-
+const mongoose = require('mongoose')
 var apiRoutes = require("./routes/api.js")
 var fccTestingRoutes = require("./routes/fcctesting.js")
 var runner = require("./test-runner")
 require("dotenv").config()
 
 var app = express()
+const {MONGO_PASSWORD, MONGO_USER} = process.env
+mongoose.connect(`mongodb://${MONGO_USER}:${MONGO_PASSWORD}@ds137008.mlab.com:37008/stock-checker`, {useNewUrlParser: true});
 
 app.use("/public", express.static(process.cwd() + "/public"))
 
