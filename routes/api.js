@@ -18,39 +18,13 @@ module.exports = function(app) {
   app.route("/api/stock-prices").get(async (req, res) => {
     const stockHandler = new StockHandler()
     const { stock, like } = req.query
-    if (stock instanceof Array) {
-      const stockData = await stockHandler.getStockData({ stock, like })
-      console.log(stockData)
+    if (stock instanceof Array && stock.length === 2) {
       return res.json({
-        stockData: stockData.map(({ stock, price, rel_likes }) => ({
-          stock,
-          price,
-          rel_likes
-        }))
+        stockData: await stockHandler.CompareStockData({ stock, like })
       })
     } else {
       const ip = req.headers["x-real-ip"] || req.connection.remoteAddress
-      const price = await stockHandler.getPrice(stock)
-      const dbStock = await Currency.findOne({ name: stock })
-      if (!dbStock) {
-        const dbLike = like ? [{ ip }] : []
-        await new Currency({
-          name: stock,
-          like: dbLike
-        }).save()
-        const likes = dbLike.length
-        return res.json({ stockData: { stock, price, likes } })
-      } else {
-        if (
-          like &&
-          dbStock.like.every(({ ip: previousIp }) => previousIp !== ip)
-        ) {
-          dbStock.like.push({ ip })
-          await dbStock.save()
-        }
-        const likes = dbStock.like.length
-        return res.json({ stockData: { stock, price, likes } })
-      }
+      return res.json({stockData: await stockHandler.getStockData({stock, like, ip})})
     }
   })
 }

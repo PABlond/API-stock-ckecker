@@ -2,6 +2,10 @@ const axios = require("axios")
 const Currency = require("./../models/currency")
 
 module.exports = class StockHandler {
+  async getDbCurrency(name) {
+    return await Currency.findOne({ name })
+  }
+
   async getPrice(stock) {
     const {
       data: { latestPrice: price }
@@ -23,13 +27,17 @@ module.exports = class StockHandler {
       stockData[0].rel_likes = stockData[0].likes - stockData[1].likes
       stockData[1].rel_likes = stockData[1].likes - stockData[0].likes
     }
-    return stockData
+    
+    return stockData.map((stock, i) => {
+      const target = i === 0 ? 1 : 0
+      return {...stock, rel_likes: stockData[i].likes - stockData[target].likes}
+    }).map(stock => ({...stock, likes: undefined}))
   }
 
-  async getStockData({ stock, like }) {
+  async CompareStockData({ stock, like }) {
     const stockData = []
     for await (const cur of stock) {
-      const dbCur = await Currency.findOne({ name: cur })
+      const dbCur = await this.getDbCurrency(cur)
       if (!dbCur) {
         this.createStock(cur, like ? [{ ip }] : [])
       }
@@ -40,5 +48,27 @@ module.exports = class StockHandler {
       })
     }
     return this.getRelLikes(stockData, like)
+  }
+
+  async getStockData({ stock, like, ip }) {
+    const price = await this.getPrice(stock)
+    const dbStock = await this.getDbCurrency(stock)
+    if (!dbStock) {
+      const dbLike = like ? [{ ip }] : []
+      await new Currency({
+        name: stock,
+        like: dbLike
+      }).save()
+      return { stock, price, likes: dbLike.length }
+    } else {
+      if (
+        like &&
+        dbStock.like.every(({ ip: previousIp }) => previousIp !== ip)
+      ) {
+        dbStock.like.push({ ip })
+        await dbStock.save()
+      }
+      return { stock, price, likes: dbStock.like.length }
+    }
   }
 }

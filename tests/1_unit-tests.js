@@ -9,10 +9,16 @@
 var chai = require('chai');
 var StockHandler = require('../controllers/stockHandler.js');
 
+const assert = chai.assert
 var stockPrices = new StockHandler();
 
 suite('Unit Tests', function(){
-
+    test("Whole number input", done => {
+        const input = "32L"
+        assert.equal(stockPrices.getNum(input), 32)
+        done()
+      })
+  
 //none requiered
 
 });
