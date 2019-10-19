@@ -19,12 +19,12 @@ module.exports = function(app) {
     const stockHandler = new StockHandler()
     const { stock, like } = req.query
     if (stock instanceof Array && stock.length === 2) {
-      return res.json({
+      return res.status(201).json({
         stockData: await stockHandler.CompareStockData({ stock, like })
       })
     } else {
       const ip = req.headers["x-real-ip"] || req.connection.remoteAddress
-      return res.json({stockData: await stockHandler.getStockData({stock, like, ip})})
+      return res.status(201).json({stockData: await stockHandler.getStockData({stock, like, ip})})
     }
   })
 }

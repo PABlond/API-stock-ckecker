@@ -23,15 +23,17 @@ module.exports = class StockHandler {
   }
 
   getRelLikes(stockData, like) {
-    if (like) {
-      stockData[0].rel_likes = stockData[0].likes - stockData[1].likes
-      stockData[1].rel_likes = stockData[1].likes - stockData[0].likes
-    }
-    
-    return stockData.map((stock, i) => {
-      const target = i === 0 ? 1 : 0
-      return {...stock, rel_likes: stockData[i].likes - stockData[target].likes}
-    }).map(stock => ({...stock, likes: undefined}))
+    return stockData
+      .map((stock, i) => {
+        const target = i === 0 ? 1 : 0
+        return {
+          ...stock,
+          rel_likes: like
+            ? stockData[i].likes - stockData[target].likes
+            : undefined
+        }
+      })
+      .map(stock => ({ ...stock, likes: undefined }))
   }
 
   async CompareStockData({ stock, like }) {
@@ -39,7 +41,7 @@ module.exports = class StockHandler {
     for await (const cur of stock) {
       const dbCur = await this.getDbCurrency(cur)
       if (!dbCur) {
-        this.createStock(cur, like ? [{ ip }] : [])
+        this.createStock(cur, [])
       }
       stockData.push({
         stock: cur,
