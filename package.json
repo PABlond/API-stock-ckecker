@@ -8,7 +8,7 @@
     "test": "fuser -k 3000/tcp & ./node_modules/mocha/bin/mocha -u tdd tests"
   },
   "dependencies": {
-    "axios": "^0.19.0",
+    "axios": "^0.21.1",
     "body-parser": "^1.19.0",
     "chai": "^3.5.0",
     "chai-http": "^3.0.0",
